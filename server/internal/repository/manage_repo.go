@@ -75,11 +75,17 @@ func SaveSiteBasic(c model.BasicConfig) error {
 	c.SiteURL = NormalizeSiteURL(c.SiteURL)
 	c.Tip = model.NormalizeTipConfig(c.Tip)
 	c.Notice = model.NormalizeNoticeConfig(c.Notice)
+	if c.SystemMode == "" {
+		c.SystemMode = model.ModeCollect
+	}
 	rec := model.SiteConfigRecord{
 		SiteName: c.SiteName, SiteURL: c.SiteURL, Logo: c.Logo,
 		Keyword: c.Keyword, Describe: c.Describe, State: c.State, Hint: c.Hint,
-		TipJSON:    model.EncodeTipJSON(c.Tip),
-		NoticeJSON: model.EncodeNoticeJSON(c.Notice),
+		TipJSON:      model.EncodeTipJSON(c.Tip),
+		NoticeJSON:   model.EncodeNoticeJSON(c.Notice),
+		SystemMode:   string(c.SystemMode),
+		TmdbApiKey:   c.TmdbApiKey,
+		TmdbProxyUrl: c.TmdbProxyUrl,
 	}
 	if err := db.Mdb.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&model.SiteConfigRecord{}).Error; err != nil {
@@ -111,6 +117,9 @@ func GetSiteBasic() model.BasicConfig {
 				c.SiteURL = NormalizeSiteURL(c.SiteURL)
 				c.Tip = model.NormalizeTipConfig(c.Tip)
 				c.Notice = model.NormalizeNoticeConfig(c.Notice)
+				if c.SystemMode == "" {
+					c.SystemMode = model.ModeCollect
+				}
 				return c
 			}
 			log.Println("GetSiteBasic Redis Unmarshal Error")
@@ -119,6 +128,7 @@ func GetSiteBasic() model.BasicConfig {
 	}
 	// 2. MySQL 兜底
 	if db.Mdb == nil {
+		c.SystemMode = model.ModeCollect
 		c.Tip = model.DefaultTipConfig()
 		c.Notice = model.DefaultNoticeConfig()
 		return c
@@ -126,15 +136,23 @@ func GetSiteBasic() model.BasicConfig {
 	var rec model.SiteConfigRecord
 	if err := db.Mdb.Order("id DESC").First(&rec).Error; err != nil {
 		log.Println("GetSiteBasic MySQL Error:", err)
+		c.SystemMode = model.ModeCollect
 		c.Tip = model.DefaultTipConfig()
 		c.Notice = model.DefaultNoticeConfig()
 		return c
 	}
+	mode := model.SystemMode(rec.SystemMode)
+	if mode == "" {
+		mode = model.ModeCollect
+	}
 	c = model.BasicConfig{
 		SiteName: rec.SiteName, SiteURL: NormalizeSiteURL(rec.SiteURL), Logo: rec.Logo,
 		Keyword: rec.Keyword, Describe: rec.Describe, State: rec.State, Hint: rec.Hint,
-		Tip:    model.DecodeTipJSON(rec.TipJSON),
-		Notice: model.DecodeNoticeJSON(rec.NoticeJSON),
+		Tip:          model.DecodeTipJSON(rec.TipJSON),
+		Notice:       model.DecodeNoticeJSON(rec.NoticeJSON),
+		SystemMode:   mode,
+		TmdbApiKey:   rec.TmdbApiKey,
+		TmdbProxyUrl: rec.TmdbProxyUrl,
 	}
 	// 回填缓存
 	if db.Rdb != nil {

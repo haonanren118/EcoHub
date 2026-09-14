@@ -19,6 +19,9 @@ export interface SiteConfig {
   hint: string;
   tip?: TipConfig;
   notice?: NoticeConfig;
+  systemMode?: "collect" | "private" | "hybrid";
+  tmdbApiKey?: string;
+  tmdbProxyUrl?: string;
 }
 
 interface SiteConfigContextType {
@@ -58,10 +61,11 @@ export default function SiteGuard({
   };
 
   useEffect(() => {
-    if (!initialConfig) {
+    // 无论是初次无配置，还是客户端路由导航进入管理后台，均自动拉取最新配置保证系统模式绝对同步
+    if (!initialConfig || pathname.startsWith("/manage")) {
       void fetchConfig();
     }
-  }, [initialConfig]);
+  }, [initialConfig, pathname]);
 
   if (loading) {
     return (

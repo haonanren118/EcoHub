@@ -56,6 +56,12 @@ func (s *InitService) DefaultDataInit() {
 	s.SpiderInit()
 	s.ensureFilmListSnapshot()
 	s.loadActiveFilmReadModel()
+
+	// 服务启动自愈：清理上次异常中断或关机残留的扫描中状态
+	_ = db.Mdb.Model(&model.StorageSource{}).Where("scan_status = ?", "scanning").Updates(map[string]any{
+		"scan_status": "idle",
+		"last_error":  "服务重启，已自动重置未完成的扫描任务",
+	}).Error
 }
 
 func (s *InitService) ensureFilmListSnapshot() {
@@ -136,8 +142,11 @@ func defaultBasicConfig() model.BasicConfig {
 		Describe: "自动采集, 多播放源集成,在线观影网站",
 		State:    true,
 		Hint:     "网站升级中, 暂时无法访问 !!!",
-		Tip:      model.DefaultTipConfig(),
-		Notice:   model.DefaultNoticeConfig(),
+		Tip:          model.DefaultTipConfig(),
+		Notice:       model.DefaultNoticeConfig(),
+		SystemMode:   model.ModeCollect,
+		TmdbApiKey:   "",
+		TmdbProxyUrl: "https://api.themoviedb.org",
 	}
 }
 

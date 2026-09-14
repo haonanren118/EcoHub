@@ -42,6 +42,9 @@ func SetupRouter() *gin.Engine {
 	api.GET(`/hotKeywords`, handler.IndexHd.HotKeywords)
 	api.GET(`/filmClassify`, handler.IndexHd.FilmClassify)
 	api.GET(`/filmClassifySearch`, handler.IndexHd.FilmTagSearch)
+	api.GET(`/stream/play`, handler.StreamHd.StreamPlayRedirect)
+	api.HEAD(`/stream/play`, handler.StreamHd.StreamPlayRedirect)
+	api.OPTIONS(`/stream/play`, handler.StreamHd.StreamPlayRedirect)
 	api.POST(`/stat/view`, handler.AccessHd.TrackView)
 	api.POST(`/login`, handler.UserHd.Login)
 	api.POST(`/logout`, middleware.AuthToken(), handler.UserHd.Logout)
@@ -109,6 +112,17 @@ func SetupRouter() *gin.Engine {
 			mapping.POST(`/rule/update`, handler.ManageHd.MappingRuleUpdate)
 			mapping.POST(`/rule/del`, handler.ManageHd.MappingRuleDel)
 			mapping.POST(`/rule/reload`, handler.ManageHd.MappingRuleReload)
+		}
+
+		// 媒体存储与挂载管理
+		storageRoute := manageRoute.Group(`/storage`)
+		{
+			storageRoute.GET(`/list`, handler.StorageHd.List)
+			storageRoute.POST(`/save`, handler.StorageHd.Save)
+			storageRoute.POST(`/test`, handler.StorageHd.TestConnection)
+			storageRoute.DELETE(`/delete`, handler.StorageHd.Delete)
+			storageRoute.POST(`/scan`, handler.StorageHd.Scan)
+			storageRoute.POST(`/stop`, handler.StorageHd.StopScan)
 		}
 
 		// 用户相关

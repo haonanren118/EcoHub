@@ -124,6 +124,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       v.setAttribute("x5-playsinline", "true");
       v.setAttribute("x5-video-player-type", "h5");
       v.setAttribute("x5-video-player-fullscreen", "false");
+      v.setAttribute("referrerpolicy", "no-referrer");
     }
 
     playerRef.current = art;
@@ -173,6 +174,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         v.setAttribute("playsinline", "true");
         v.setAttribute("webkit-playsinline", "true");
         v.setAttribute("x5-playsinline", "true");
+        v.setAttribute("referrerpolicy", "no-referrer");
       }
       if (initialTime > 0) {
         art.currentTime = initialTime;

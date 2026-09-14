@@ -55,4 +55,11 @@ export const ApiPostLong = <T = any>(
   return instance.post(url, data, { timeout }) as any;
 };
 
+export const ApiDelete = <T = any>(
+  url: string,
+  params?: Record<string, any>,
+): Promise<ApiResponse<T>> => {
+  return instance.delete(url, { params }) as any;
+};
+
 export default instance;

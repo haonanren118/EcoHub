@@ -7,6 +7,7 @@ import {
   Card,
   Flex,
   Input,
+  Radio,
   Space,
   Spin,
   Switch,
@@ -32,6 +33,9 @@ export interface BasicInfoPayload {
   state: boolean;
   describe: string;
   hint: string;
+  systemMode: "collect" | "private" | "hybrid";
+  tmdbApiKey: string;
+  tmdbProxyUrl: string;
 }
 
 const DEFAULT_BASIC_INFO: BasicInfoPayload = {
@@ -42,6 +46,9 @@ const DEFAULT_BASIC_INFO: BasicInfoPayload = {
   state: true,
   describe: "",
   hint: "网站升级中, 暂时无法访问 !!!",
+  systemMode: "collect",
+  tmdbApiKey: "",
+  tmdbProxyUrl: "https://api.themoviedb.org",
 };
 
 const MAX_SITE_NAME_LEN = 64;
@@ -58,6 +65,9 @@ function normalizeBasicInfo(raw?: Partial<BasicInfoPayload> | null): BasicInfoPa
     state: raw?.state === undefined ? true : Boolean(raw.state),
     describe: String(raw?.describe ?? "").trim(),
     hint: String(raw?.hint ?? "").trim() || DEFAULT_BASIC_INFO.hint,
+    systemMode: (raw?.systemMode as any) || "collect",
+    tmdbApiKey: String(raw?.tmdbApiKey ?? "").trim(),
+    tmdbProxyUrl: String(raw?.tmdbProxyUrl ?? "").trim() || "https://api.themoviedb.org",
   };
 }
 
@@ -211,6 +221,59 @@ export default function BasicConfigCard({ canWrite }: BasicConfigCardProps) {
             />
             <Typography.Text type="secondary" style={{ fontSize: 12 }}>
               展示在前台顶部导航、浏览器标题及页面元数据中
+            </Typography.Text>
+          </div>
+
+          {/* 系统运行模式 */}
+          <div className={styles.field}>
+            <Typography.Text strong>系统运行模式</Typography.Text>
+            <Radio.Group
+              disabled={!isEditing || !canWrite}
+              value={currentValues.systemMode}
+              onChange={(e) =>
+                setDraft((prev) => ({ ...prev, systemMode: e.target.value }))
+              }
+            >
+              <Space direction="vertical">
+                <Radio value="collect">公共采集模式（默认，保留采集中心与 TVBox 订阅）</Radio>
+                <Radio value="private">私有媒体库模式（WebDAV/Alist+TMDB，隐藏采集中心，100% 合规）</Radio>
+                <Radio value="hybrid">混合双模（私有源优先原画播放，网络采集源兜底补充）</Radio>
+              </Space>
+            </Radio.Group>
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              切换至纯私有模式将彻底屏蔽第三方采集中心与爬虫，适合 NAS/企业客户交付
+            </Typography.Text>
+          </div>
+
+          {/* TMDB API Key */}
+          <div className={styles.field}>
+            <Typography.Text strong>TMDB API Key（刮削密钥）</Typography.Text>
+            <Input
+              disabled={!isEditing || !canWrite}
+              placeholder="请输入 TheMovieDatabase API Key (v3 auth)"
+              value={currentValues.tmdbApiKey}
+              onChange={(e) =>
+                setDraft((prev) => ({ ...prev, tmdbApiKey: e.target.value }))
+              }
+            />
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              用于自动拉取私有影视的官方高清海报、横版剧照、演职员与评分
+            </Typography.Text>
+          </div>
+
+          {/* TMDB 反代地址 */}
+          <div className={styles.field}>
+            <Typography.Text strong>TMDB API 反代/代理地址</Typography.Text>
+            <Input
+              disabled={!isEditing || !canWrite}
+              placeholder="https://api.themoviedb.org"
+              value={currentValues.tmdbProxyUrl}
+              onChange={(e) =>
+                setDraft((prev) => ({ ...prev, tmdbProxyUrl: e.target.value }))
+              }
+            />
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              国内网络环境下建议配置反代域名以防止 API 请求被网络阻断
             </Typography.Text>
           </div>
 

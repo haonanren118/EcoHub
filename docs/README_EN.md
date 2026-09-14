@@ -15,7 +15,7 @@
 
 [中文](../README.md) | English
 
-[Demo](https://eco.fe-spark.cn) · [Admin](https://eco.fe-spark.cn/manage) · [Deploy](./README-Deploy_EN.md) · [FAQ](./README-FAQ_EN.md) · [Telegram Group](https://t.me/ecohub_club)
+[Demo](https://eco.fe-spark.cn) · [Admin](https://eco.fe-spark.cn/manage) · [Deploy](./README-Deploy_EN.md) · [FAQ](./README-FAQ_EN.md) · [Commercial License](../COMMERCIAL.md) · [Telegram Group](https://t.me/ecohub_club)
 
 </div>
 
@@ -117,13 +117,15 @@ Public site: `http://127.0.0.1:3000`. Administration panel: `/manage`. API: `htt
 | [Deploy](./README-Deploy_EN.md) | Install script, 1Panel, manual deploy, reverse proxy, upgrades |
 | [FAQ](./README-FAQ_EN.md) | Empty catalog, collect, cache, authentication |
 | [Release notes](./RELEASE.md) | Changelog, image tags |
+| [Commercial & Sponsorship](../COMMERCIAL.md) | Commercial license and sponsorship options |
+| [Contributing](../CONTRIBUTING.md) | Contribution guide and CLA terms |
 | [Server](../server/README.md) / [Web](../web/README.md) | Environment variables, APIs, local startup |
 | [Chinese README](../README.md) | 中文总览 |
 
 ## Community
 
-- Telegram Group: [https://t.me/+6O6MiUdVSOplNjQ0](https://t.me/+6O6MiUdVSOplNjQ0)
+- Telegram Group: [https://t.me/ecohub_club](https://t.me/ecohub_club)
 
 ---
 
-[PolyForm Noncommercial 1.0.0](../LICENSE) · [fe-spark/EcoHub](https://github.com/fe-spark/EcoHub) · [Issues](https://github.com/fe-spark/EcoHub/issues) · [Telegram Group](https://t.me/+6O6MiUdVSOplNjQ0)
+[PolyForm Noncommercial 1.0.0](../LICENSE) · [Commercial License](../COMMERCIAL.md) · [Contributing](../CONTRIBUTING.md) · [fe-spark/EcoHub](https://github.com/fe-spark/EcoHub) · [Issues](https://github.com/fe-spark/EcoHub/issues) · [Telegram Group](https://t.me/+6O6MiUdVSOplNjQ0)

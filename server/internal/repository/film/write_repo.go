@@ -1496,7 +1496,7 @@ type resolvedSearchCategory struct {
 
 func resolveOriginalCategoryName(sourceId string, sourcePid int64, sourceCid int64, fallback string) string {
 	fallback = strings.TrimSpace(fallback)
-	if strings.TrimSpace(sourceId) == "manual" {
+	if strings.TrimSpace(sourceId) == "manual" || strings.HasPrefix(strings.TrimSpace(sourceId), "storage_") {
 		return fallback
 	}
 
@@ -1569,7 +1569,7 @@ type normalizedSearchMeta struct {
 }
 
 func resolveSearchCategory(sourceId string, detail model.MovieDetail) resolvedSearchCategory {
-	if strings.TrimSpace(sourceId) == "manual" {
+	if strings.TrimSpace(sourceId) == "manual" || strings.HasPrefix(strings.TrimSpace(sourceId), "storage_") {
 		category := resolveLocalCategory(detail.Pid, detail.Cid, detail.CName)
 		category.OriginalCategory = strings.TrimSpace(detail.CName)
 		return category

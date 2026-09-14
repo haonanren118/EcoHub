@@ -122,16 +122,20 @@ func RebuildFilmListSnapshot(version string) error {
 		return err
 	}
 
+	isPrivateMode := isPrivateSystemMode()
 	var lastID uint
 	total := 0
 	for {
 		batchStartedAt := time.Now()
 		var indexes []model.FilmIndex
-		if err := db.Mdb.Joins("JOIN "+model.TableMovieDetail+" ON "+model.TableMovieDetail+".mid = film_index.mid AND "+model.TableMovieDetail+".deleted_at IS NULL").
+		query := db.Mdb.Joins("JOIN "+model.TableMovieDetail+" ON "+model.TableMovieDetail+".mid = film_index.mid AND "+model.TableMovieDetail+".deleted_at IS NULL").
 			Where("film_index.id > ?", lastID).
 			Order("film_index.id ASC").
-			Limit(snapshotBuildBatchSize).
-			Find(&indexes).Error; err != nil {
+			Limit(snapshotBuildBatchSize)
+		if isPrivateMode {
+			query = query.Where("film_index.source_id LIKE ?", "storage_%")
+		}
+		if err := query.Find(&indexes).Error; err != nil {
 			return err
 		}
 		if len(indexes) == 0 {
@@ -1014,4 +1018,23 @@ func matchPattern(pattern, key string) bool {
 		return m
 	}
 	return matched
+}
+
+func isPrivateSystemMode() bool {
+	if db.Rdb != nil {
+		if data := db.Rdb.Get(db.Cxt, config.SiteConfigBasic).Val(); data != "" {
+			var bc model.BasicConfig
+			if json.Unmarshal([]byte(data), &bc) == nil && bc.SystemMode != "" {
+				return bc.SystemMode == model.ModePrivate
+			}
+		}
+	}
+	if db.Mdb == nil {
+		return false
+	}
+	var rec model.SiteConfigRecord
+	if err := db.Mdb.Order("id DESC").First(&rec).Error; err == nil {
+		return rec.SystemMode == string(model.ModePrivate)
+	}
+	return false
 }

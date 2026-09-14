@@ -15,7 +15,7 @@
 
 中文 | [English](./docs/README_EN.md)
 
-[在线演示](https://eco.fe-spark.cn) · [管理后台](https://eco.fe-spark.cn/manage) · [部署指南](./docs/README-Deploy.md) · [常见问题](./docs/README-FAQ.md) · [交流群组](https://t.me/ecohub_club)
+[在线演示](https://eco.fe-spark.cn) · [管理后台](https://eco.fe-spark.cn/manage) · [部署指南](./docs/README-Deploy.md) · [常见问题](./docs/README-FAQ.md) · [商业授权与赞助](./COMMERCIAL.md) · [交流群组](https://t.me/ecohub_club)
 
 </div>
 
@@ -119,8 +119,19 @@ npm run dev
 | [部署指南](./docs/README-Deploy.md) | 安装脚本、1Panel、手动部署、反向代理与升级 |
 | [常见问题](./docs/README-FAQ.md) | 空站、采集、缓存、登录 |
 | [版本说明](./docs/RELEASE.md) | 变更记录、镜像 tag |
+| [商业授权与赞助](./COMMERCIAL.md) | 闭源商业授权场景、定制合作与赞助特权说明 |
+| [贡献指南](./CONTRIBUTING.md) | PR 提交规范与代码版权授权 (CLA) 条款 |
 | [服务端](./server/README.md) / [前端](./web/README.md) | 环境变量、接口、本地启动 |
 | [English](./docs/README_EN.md) | English overview |
+
+## 商业授权与赞助
+
+EcoHub 遵循 [PolyForm Noncommercial 1.0.0](./LICENSE) 协议，**个人自用及非商业场景完全免费**。
+
+- **商业闭源授权 (Commercial License)**：若您计划将 EcoHub 用于硬件预装（NAS / 电视盒子）、品牌贴牌定制 (White-label)、系统二次开发商用或对外提供付费商业代建服务，须事先获得官方商业授权。
+- **个人发烧友赞助 (Sponsorship)**：支持项目持续研发，可获取 Android / 鸿蒙客户端抢先体验包、专属交流支持与一对一部署指导。
+- **商务联系**：邮箱 `spark.xiaoyu@qq.com`（请注明：`EcoHub 商业合作`）。
+- 详细说明请参阅：[商业授权与赞助指南 (COMMERCIAL.md)](./COMMERCIAL.md)。
 
 ## 交流社区
 
@@ -128,4 +139,4 @@ npm run dev
 
 ---
 
-[PolyForm Noncommercial 1.0.0](./LICENSE) · [fe-spark/EcoHub](https://github.com/fe-spark/EcoHub) · [Issues](https://github.com/fe-spark/EcoHub/issues) · [Telegram Group](https://t.me/+6O6MiUdVSOplNjQ0)
+[PolyForm Noncommercial 1.0.0](./LICENSE) · [商业授权](./COMMERCIAL.md) · [贡献指南](./CONTRIBUTING.md) · [fe-spark/EcoHub](https://github.com/fe-spark/EcoHub) · [Issues](https://github.com/fe-spark/EcoHub/issues) · [Telegram Group](https://t.me/+6O6MiUdVSOplNjQ0)

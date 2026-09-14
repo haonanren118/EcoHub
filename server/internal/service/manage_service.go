@@ -40,7 +40,24 @@ func (s *ManageService) UpdateSiteBasic(bc model.BasicConfig) error {
 	if bc.Notice.Title != "" || bc.Notice.Content != "" {
 		curr.Notice = bc.Notice
 	}
-	return repository.SaveSiteBasic(curr)
+	modeChanged := bc.SystemMode != "" && bc.SystemMode != curr.SystemMode
+	if bc.SystemMode != "" {
+		curr.SystemMode = bc.SystemMode
+	}
+	curr.TmdbApiKey = bc.TmdbApiKey
+	curr.TmdbProxyUrl = bc.TmdbProxyUrl
+	if err := repository.SaveSiteBasic(curr); err != nil {
+		return err
+	}
+	if modeChanged {
+		go func() {
+			newVer := filmrepo.NewSnapshotVersion()
+			if err := filmrepo.RebuildFilmListSnapshot(newVer); err == nil {
+				_ = filmrepo.ActivateRebuiltFilmListSnapshot(newVer)
+			}
+		}()
+	}
+	return nil
 }
 
 // GetSiteTipConfig 获取赞赏配置

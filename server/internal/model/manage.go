@@ -45,18 +45,30 @@ func DefaultTipConfig() TipConfig {
 	}
 }
 
+// SystemMode 系统运行模式枚举
+type SystemMode string
+
+const (
+	ModeCollect SystemMode = "collect" // 传统采集模式（默认）
+	ModePrivate SystemMode = "private" // 纯私有媒体库模式（WebDAV + TMDB，合规无风险）
+	ModeHybrid  SystemMode = "hybrid"  // 混合模式（私有优先，采集兜底）
+)
+
 // BasicConfig 网站基本信息 (返回前端DTO与Redis缓存结构相同)
 type BasicConfig struct {
 	SiteName string `json:"siteName"` // 网站名称
 	// SiteURL 网站访问地址（公网根地址，如 https://example.com），用于 Logo 跳转与 Telegram 播放链接等
-	SiteURL  string    `json:"siteUrl"`
-	Logo     string    `json:"logo"`     // 网站logo
-	Keyword  string    `json:"keyword"`  // seo关键字
-	Describe string    `json:"describe"` // 网站描述信息
-	State    bool         `json:"state"`    // 网站状态 开启 || 关闭
-	Hint     string       `json:"hint"`     // 网站关闭提示
-	Tip      TipConfig    `json:"tip"`      // 前台赞赏
-	Notice   NoticeConfig `json:"notice"`   // 开屏公告
+	SiteURL      string       `json:"siteUrl"`
+	Logo         string       `json:"logo"`         // 网站logo
+	Keyword      string       `json:"keyword"`      // seo关键字
+	Describe     string       `json:"describe"`     // 网站描述信息
+	State        bool         `json:"state"`        // 网站状态 开启 || 关闭
+	Hint         string       `json:"hint"`         // 网站关闭提示
+	Tip          TipConfig    `json:"tip"`          // 前台赞赏
+	Notice       NoticeConfig `json:"notice"`       // 开屏公告
+	SystemMode   SystemMode   `json:"systemMode"`   // 运行模式: collect | private | hybrid
+	TmdbApiKey   string       `json:"tmdbApiKey"`   // TMDB API Key
+	TmdbProxyUrl string       `json:"tmdbProxyUrl"` // TMDB 代理/反代地址
 }
 
 // Banner 首页横幅信息
@@ -103,9 +115,12 @@ type SiteConfigRecord struct {
 	Keyword    string `gorm:"size:256"`
 	Describe   string `gorm:"size:512"`
 	State      bool
-	Hint       string `gorm:"size:512"`
-	TipJSON    string `gorm:"type:text;column:tip_json"`    // TipConfig JSON
-	NoticeJSON string `gorm:"type:text;column:notice_json"` // NoticeConfig JSON
+	Hint         string `gorm:"size:512"`
+	TipJSON      string `gorm:"type:text;column:tip_json"`          // TipConfig JSON
+	NoticeJSON   string `gorm:"type:text;column:notice_json"`       // NoticeConfig JSON
+	SystemMode   string `gorm:"size:32;default:collect;column:system_mode"`
+	TmdbApiKey   string `gorm:"size:128;column:tmdb_api_key"`
+	TmdbProxyUrl string `gorm:"size:256;column:tmdb_proxy_url"`
 }
 
 func (SiteConfigRecord) TableName() string {

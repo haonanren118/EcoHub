@@ -16,4 +16,6 @@
 | [服务端说明](../server/README.md) | 环境变量、接口、鉴权 |
 | [Telegram 通知](../server/notify.md) | 通知行为 |
 | [前端说明](../web/README.md) | 页面结构与本地启动 |
+| [商业授权与赞助](../COMMERCIAL.md) | 商业授权模式与赞助方案 |
+| [贡献指南](../CONTRIBUTING.md) | PR 规范与代码版权归属 (CLA) 条款 |
 | [Telegram 交流群](https://t.me/ecohub_club) | 官方交流社群 |

@@ -34,6 +34,7 @@ import {
   GithubOutlined,
   QuestionCircleOutlined,
   LineChartOutlined,
+  HddOutlined,
 } from "@ant-design/icons";
 import { PROJECT_GITHUB_URL, DEFAULT_SITE_NAME } from "@/lib/project";
 
@@ -59,103 +60,13 @@ type AdminNotice = {
 const { Sider, Header, Content } = Layout;
 const { useBreakpoint } = Grid;
 
-type MenuItem = Required<MenuProps>["items"][number];
-
-const themeModeLabels: Record<ThemeMode, string> = {
-  light: "浅色",
-  dark: "深色",
-  system: "跟随系统",
-};
-
-const menuItems: MenuItem[] = [
-  {
-    key: "/manage",
-    icon: <HomeOutlined />,
-    label: "工作台",
-  },
-  {
-    key: "sub-collect",
-    icon: <ThunderboltOutlined />,
-    label: "采集管理",
-    children: [
-      { key: "/manage/collect", label: <span data-tour="menu-collect">采集中心</span> },
-      { key: "/manage/collect/record", label: <span data-tour="menu-record">失败记录</span> },
-      { key: "/manage/cron", label: <span data-tour="menu-cron">计划任务</span> },
-    ],
-  },
-  {
-    key: "sub-film",
-    icon: <VideoCameraOutlined />,
-    label: "内容管理",
-    children: [
-      { key: "/manage/film", label: <span data-tour="menu-film">影片列表</span> },
-      { key: "/manage/banners", label: "首页轮播" },
-      { key: "/manage/collect/category", label: <span data-tour="menu-category">分类管理</span> },
-      { key: "/manage/collect/category/rules", label: <span data-tour="menu-rules">分类规则</span> },
-    ],
-  },
-  {
-    key: "/manage/file",
-    icon: <FolderOpenOutlined />,
-    label: "素材中心",
-  },
-  {
-    key: "/manage/system/users",
-    icon: <TeamOutlined />,
-    label: "账号管理",
-  },
-  {
-    key: "/manage/system/website",
-    icon: <GlobalOutlined />,
-    label: "网站配置",
-  },
-  {
-    key: "/manage/access",
-    icon: <LineChartOutlined />,
-    label: "数据分析",
-  },
-  {
-    key: "/manage/system",
-    icon: <SettingOutlined />,
-    label: "系统设置",
-  },
-];
-
-function resolveMenuKey(pathname: string) {
-  if (pathname.startsWith("/manage/banners")) return "/manage/banners";
-  if (pathname.startsWith("/manage/film/add")) return "/manage/film";
-  if (pathname.startsWith("/manage/collect/category/rules")) return "/manage/collect/category/rules";
-  if (pathname.startsWith("/manage/collect/category")) return "/manage/collect/category";
-  if (pathname.startsWith("/manage/film")) return "/manage/film";
-  if (pathname.startsWith("/manage/collect/record")) return "/manage/collect/record";
-  if (pathname.startsWith("/manage/collect")) return "/manage/collect";
-  if (pathname.startsWith("/manage/cron")) return "/manage/cron";
-  if (pathname.startsWith("/manage/system/users")) return "/manage/system/users";
-  if (pathname.startsWith("/manage/system/website")) return "/manage/system/website";
-  if (pathname.startsWith("/manage/access")) return "/manage/access";
-  if (pathname.startsWith("/manage/system")) return "/manage/system";
-  if (pathname.startsWith("/manage/file")) return "/manage/file";
-  return "/manage";
-}
-
-
-function collectAllOpenKeys(items: MenuItem[]) {
-  const openKeys: string[] = [];
-  for (const item of items) {
-    if (
-      !item ||
-      typeof item !== "object" ||
-      !("children" in item) ||
-      !item.children ||
-      !("key" in item) ||
-      typeof item.key !== "string"
-    ) {
-      continue;
-    }
-    openKeys.push(item.key);
-  }
-  return openKeys;
-}
+import {
+  MenuItem,
+  themeModeLabels,
+  resolveMenuKey,
+  collectAllOpenKeys,
+  computeVisibleMenuItems,
+} from "./menu-config";
 
 export default function ManageLayoutView({
   children,
@@ -164,7 +75,7 @@ export default function ManageLayoutView({
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const { config: siteInfo } = useSiteConfig();
+  const { config: siteInfo, refresh: refreshSiteConfig } = useSiteConfig();
   const { mode, setMode } = useThemeMode();
   const [userInfo, setUserInfo] = useState<any>(null);
   const [notices, setNotices] = useState<AdminNotice[]>([]);
@@ -184,6 +95,7 @@ export default function ManageLayoutView({
   const [accessVisible, setAccessVisible] = useState<boolean | null>(null);
 
   useEffect(() => {
+    void refreshSiteConfig();
     ApiGet("/manage/user/info").then((resp) => {
       if (resp.code === 0) {
         setUserInfo(resp.data);
@@ -256,16 +168,9 @@ export default function ManageLayoutView({
 
 
   const visibleMenuItems = useMemo(() => {
-    return menuItems.filter((item) => {
-      if (item?.key === "/manage/access") {
-        return Boolean(userInfo?.isAdmin && accessVisible);
-      }
-      if (item?.key === "/manage/system") {
-        return Boolean(userInfo?.isAdmin);
-      }
-      return true;
-    });
-  }, [userInfo?.isAdmin, accessVisible]);
+    const mode = (siteInfo as any)?.systemMode || "collect";
+    return computeVisibleMenuItems(mode, userInfo?.isAdmin, accessVisible);
+  }, [userInfo?.isAdmin, accessVisible, siteInfo]);
   const openKeys = collectAllOpenKeys(visibleMenuItems);
   const themeMenuItems: MenuProps["items"] = [
     {
@@ -361,8 +266,17 @@ export default function ManageLayoutView({
               }}
               className={styles.headerIconBtn}
              />
-             <span className={styles.headerTitle}>管理后台</span>
-           </Space>
+              <span className={styles.headerTitle}>管理后台</span>
+              {siteInfo?.systemMode === "private" && (
+                <Tag color="green" bordered={false}>私有媒体库模式</Tag>
+              )}
+              {siteInfo?.systemMode === "hybrid" && (
+                <Tag color="blue" bordered={false}>混合媒体库模式</Tag>
+              )}
+              {(!siteInfo?.systemMode || siteInfo?.systemMode === "collect") && (
+                <Tag color="default" bordered={false}>公共采集模式</Tag>
+              )}
+            </Space>
 
           <Space size="small" className={styles.userArea}>
             <Button
