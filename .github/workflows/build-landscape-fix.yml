@@ -1,0 +1,51 @@
+name: Build EcoHub (landscape-fix)
+
+# 基于上游 v2.6.7 标签 + 移动端全屏横屏修复，构建 all-in-one 镜像并推送到本仓库 GHCR。
+# fnOS 为 x86_64，仅编译 linux/amd64 以加快构建。
+on:
+  push:
+    branches: [landscape-fix]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE: ghcr.io/haonanren118/ecohub
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: linux/amd64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:landscape-fix
+            ${{ env.IMAGE }}:latest
+          cache-from: type=gha,scope=all-in-one
+          cache-to: type=gha,mode=max,scope=all-in-one

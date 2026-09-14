@@ -193,13 +193,45 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
     art.on("video:playing", () => setHasError(false));
 
-    // 移动端全屏事件接管：针对 iOS 等不支持标准全屏 API 的设备，调用原生 video.webkitEnterFullscreen
-    art.on("fullscreen", (state) => {
-      if (state && typeof document.body.requestFullscreen === "undefined") {
-        const video = art.template.$video as any;
-        if (video.webkitEnterFullscreen) {
-          video.webkitEnterFullscreen();
+    // 移动端横屏接管：进入全屏时强制横屏，退出时解锁
+    const isIOS =
+      /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+      // iPadOS 13+ 伪装成 Mac，用触摸点判断
+      (navigator.platform === "MacIntel" && (navigator as any).maxTouchPoints > 1);
+
+    const lockLandscape = () => {
+      try {
+        const so = (screen as any).orientation;
+        if (so && typeof so.lock === "function") {
+          // 仅在真全屏上下文中可用（Android Chrome 生效；iOS/非安全上下文静默失败）
+          so.lock("landscape").catch(() => {});
         }
+      } catch {
+        /* 不支持则忽略，依赖设备物理旋转 */
+      }
+    };
+
+    const unlockOrientation = () => {
+      try {
+        const so = (screen as any).orientation;
+        if (so && typeof so.unlock === "function") so.unlock();
+      } catch {
+        /* ignore */
+      }
+    };
+
+    art.on("fullscreen", (state: boolean) => {
+      if (!isMobile) return;
+      const video = art.template?.$video as any;
+      if (state) {
+        // iOS：标准 requestFullscreen 不会旋转到横屏，必须用原生 webkit 全屏才能横屏播放
+        if (isIOS && video?.webkitEnterFullscreen) {
+          video.webkitEnterFullscreen();
+        } else {
+          lockLandscape();
+        }
+      } else {
+        unlockOrientation();
       }
     });
 
