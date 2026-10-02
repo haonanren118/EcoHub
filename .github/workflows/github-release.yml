@@ -107,12 +107,16 @@ jobs:
 
       # GITHUB_TOKEN 推 tag / 发 release 不会触发其他 workflow。
       # --ref 用版本 tag，dispatch 的 headBranch 才是 vX.Y.Z，才能和 push:tags 对上、避免重跑漏构建。
+      # 注意：fork 仓库中继承自上游、且从未运行过的 workflow 需要先在 Actions 页面
+      # 手动启用，否则 dispatch 返回 404；该失败不应连带让 Release 任务整体失败。
       - name: Dispatch Docker release
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}
         shell: bash
         run: |
+          set -e
           runs=$(gh run list --workflow=docker-release.yml --limit 30 --json status,conclusion,headBranch)
           covered=$(printf '%s' "$runs" | jq -r --arg v "$VERSION" '
             any(.[]; .headBranch == $v and (
@@ -128,4 +132,9 @@ jobs:
             echo "Docker Release already running or succeeded for $VERSION"
             exit 0
           fi
-          gh workflow run docker-release.yml --ref "$VERSION" -f version="$VERSION"
+          if gh workflow run docker-release.yml --ref "$VERSION" -f version="$VERSION"; then
+            echo "Dispatched Docker release for $VERSION"
+          else
+            echo "::warning::Docker release dispatch failed. fork 仓库需先在 Actions 页面手动启用 workflow；或在有 write:packages 权限的环境手动构建推送。"
+            echo "手动构建: docker build -t ghcr.io/<owner>/ecohub:$VERSION . && docker push ghcr.io/<owner>/ecohub:$VERSION"
+          fi

@@ -16,6 +16,8 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
+  # fork 可用仓库变量覆盖镜像命名空间（默认取仓库 owner）
+  IMAGE_NAMESPACE: ${{ vars.IMAGE_NAMESPACE }}
 
 jobs:
   build-and-push:
@@ -33,6 +35,9 @@ jobs:
         shell: bash
         run: |
           owner="${GITHUB_REPOSITORY_OWNER,,}"
+          if [ -n "${IMAGE_NAMESPACE}" ]; then
+            owner="${IMAGE_NAMESPACE,,}"
+          fi
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             version="${{ inputs.version }}"
           else
@@ -83,4 +88,3 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=gha,scope=all-in-one
           cache-to: type=gha,mode=max,scope=all-in-one
-
