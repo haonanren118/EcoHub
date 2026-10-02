@@ -11,6 +11,7 @@ import {
   Button,
   Card,
   Empty,
+  Modal,
   Popconfirm,
   Progress,
   Space,
@@ -742,12 +743,34 @@ export default function CollectManagePageView() {
       message.warning("该采集站已在采集中");
       return;
     }
+
+    const collectTime = record.cd ?? 24;
+
+    // 全量采集（time < 0）会清空并重建 10 张主站派生表，属不可逆的高风险操作，
+    // 必须经二次确认后才能触发，避免在下拉里误选后直接点采集造成数据清空。
+    if (collectTime < 0) {
+      const confirmed = await new Promise<boolean>((resolve) => {
+        Modal.confirm({
+          title: "确认执行全量采集？",
+          content:
+            "全量采集会清空并重建当前主站的影片索引、分类、匹配键等派生数据（不可逆），采集完成后前台才会重新展示数据。整个过程可能持续较长时间。",
+          okText: "确认全量采集",
+          okButtonProps: { danger: true },
+          cancelText: "取消",
+          onOk: () => resolve(true),
+          onCancel: () => resolve(false),
+        });
+      });
+      if (!confirmed) {
+        return;
+      }
+    }
+
     // 点击后立即展示 0% 进度条，再等接口与列表校准
     updateSiteListItem(record.id, (item) => ({
       ...item,
       progress: makeStartingProgress(record.id, record.name),
     }));
-    const collectTime = record.cd ?? 24;
     const resp = await ApiPost("/manage/spider/start", {
       id: record.id,
       time: collectTime,
@@ -896,6 +919,25 @@ export default function CollectManagePageView() {
       message.warning("请至少选择一个采集站");
       return;
     }
+
+    // 批量全量采集（batchTime < 0）会清空并重建主站派生表，不可逆，需二次确认。
+    if (batchTime < 0) {
+      const confirmed = await new Promise<boolean>((resolve) => {
+        Modal.confirm({
+          title: "确认对所选采集站执行全量采集？",
+          content: `将对 ${batchIds.length} 个采集站执行全量采集。这会清空并重建当前主站的影片索引、分类、匹配键等派生数据（不可逆），且各站将依次串行执行，耗时较长。`,
+          okText: "确认全量采集",
+          okButtonProps: { danger: true },
+          cancelText: "取消",
+          onOk: () => resolve(true),
+          onCancel: () => resolve(false),
+        });
+      });
+      if (!confirmed) {
+        return;
+      }
+    }
+
     const idSet = new Set(batchIds);
     // 批量启动：先本地全部置为 starting 0%，关闭弹窗即可看到进度
     setSiteList((current) =>

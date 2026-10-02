@@ -161,7 +161,7 @@ export const collectDuration = [
   { label: "采集一月", time: 720 },
   { label: "采集三月", time: 2160 },
   { label: "采集半年", time: 4320 },
-  { label: "全量采集", time: -1 },
+  { label: "⚠️ 全量采集（清空重建）", time: -1 },
 ];
 
 /** 采集站数量上限（前后端一致） */
