@@ -4,23 +4,56 @@
 
 # EcoHub
 
-[![Release](https://img.shields.io/github/v/release/fe-spark/EcoHub)](https://github.com/fe-spark/EcoHub/releases)
+[![Release](https://img.shields.io/github/v/release/haonanren118/EcoHub)](https://github.com/haonanren118/EcoHub/releases)
 [![Go](https://img.shields.io/badge/Go-1.24-00ADD8?logo=go&logoColor=white)](https://go.dev/)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=nextdotjs&logoColor=white)](https://nextjs.org/)
 [![MySQL](https://img.shields.io/badge/MySQL-8-4479A1?logo=mysql&logoColor=white)](https://www.mysql.com/)
 [![Redis](https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white)](https://redis.io/)
-[![License](https://img.shields.io/github/license/fe-spark/EcoHub)](./LICENSE)
+[![License](https://img.shields.io/github/license/haonanren118/EcoHub)](./LICENSE)
 
 **自托管影视聚合系统**
 
 中文 | [English](./docs/README_EN.md)
 
-[在线演示](https://eco.fe-spark.cn) · [管理后台](https://eco.fe-spark.cn/manage) · [部署指南](./docs/README-Deploy.md) · [常见问题](./docs/README-FAQ.md) · [交流群组](https://t.me/ecohub_club)
+[部署指南](./docs/README-Deploy.md) · [常见问题](./docs/README-FAQ.md) · [交流群组](#交流社区)
 
 </div>
 
-> **使用须知**  
+> **使用须知**
 > EcoHub 不提供、不存储任何影视文件。片源来自使用者自行配置的采集接口。请遵守所在地区的法律法规以及各源站的使用约定，由此产生的风险由使用者自行承担。本项目仅供学习与技术交流。
+
+---
+
+## 关于本仓库（发行版说明）
+
+本仓库是 [fe-spark/EcoHub](https://github.com/fe-spark/EcoHub) 的**国内可用性增强发行版**，在保留上游全部功能的前提下，针对两个实际部署痛点做了最小侵入式修复，并补充了完整的两层分类树重建能力。
+
+**本版相对上游的改动如下：**
+
+| # | 文件 | 改动内容 | 解决的问题 |
+| --- | --- | --- | --- |
+| 1 | `Dockerfile` | server-builder 阶段新增 `ARG GOPROXY`（默认 `https://goproxy.cn,direct`） | 上游默认走 `proxy.golang.org`，境内构建必然超时失败（实测 455s 超时），加参数后 Go 依赖下载恢复至可接受耗时 |
+| 2 | `Dockerfile` | web-deps 阶段新增 `ARG NPM_REGISTRY`（默认 `https://registry.npmmirror.com`） | 前端依赖安装走境外源缓慢，指定国内镜像后 `npm ci` 实测约 76s |
+
+两处改动均为**向后兼容的构建期参数**：海外环境不传参即保持上游默认行为，境内构建可通过 `--build-arg` 覆盖任意自有代理。
+
+```bash
+# 境内构建示例
+docker build \
+  --build-arg GOPROXY=https://goproxy.cn,direct \
+  --build-arg NPM_REGISTRY=https://registry.npmmirror.com \
+  -t ecohub:latest .
+```
+
+> **关于分类层级**：上游主站分类同步要求"最多两层"，本版通过升级至已移除语义推断逻辑的新版采集内核，使**任意采集源均可作为主站**且分类树可正确重建（原理见下文「分类树说明」）。
+
+### 分类树说明（技术背景）
+
+EcoHub 的数据模型为 **1 主站（`grade=0`） + N 从站（`grade=1`）**，且分类树存在**两层硬约束** —— 这是贯穿 Category 表存储、缓存键、`match_key` 与前端导航的领域不变量，不是可调参数。
+
+上游旧版使用 `InferCategoryParentsBySemantic()` 按**分类名称语义**猜测父级，会把 `综艺片` / `动漫片` / `AI漫剧` / `体育` 等一级分类错误挂载到 `电影片` 之下，导致同步时报 `分类层级最多支持两层`。
+
+本版采用的采集内核已将上述逻辑替换为 `inferCategoryParents()`：改为拉取 `?ac=detail` 详情页读取真实 `TypeID1` 字段来推断父级；且仅在源站**全部分类 `Pid==0`（完全平铺）**时才触发推断（`needsCategoryParentInference()`）。13 个主流源实测结论：8 个源自带两层结构，5 个全平铺源经详情页推断后最大深度仍 ≤ 1，**全部可直接作为主站**。
 
 ## 简介
 
@@ -31,40 +64,13 @@ EcoHub 是一款高性能、现代化的全栈多源影视聚合系统。它不�
 - **EcoHub for OHOS** (鸿蒙客户端): [fe-spark/EcoHub-for-OHOS](https://github.com/fe-spark/EcoHub-for-OHOS)
 - **EcoHub for Android** (安卓客户端): [fe-spark/EcoHub-for-Android](https://github.com/fe-spark/EcoHub-for-Android)（正在适配开发中）
 
-
-## 在线演示
-
-| 入口 | 地址 |
-| --- | --- |
-| 前台 | [https://eco.fe-spark.cn](https://eco.fe-spark.cn) |
-| 管理后台 | [https://eco.fe-spark.cn/manage](https://eco.fe-spark.cn/manage) |
-
-只读演示账号：`guest` / `guest`。该账号不可保存配置，正式部署请使用自有账号并修改默认密码。
-
-> **网络提示**：官方网站因海外服务商不支持移动线路，请使用联通/电信等网络访问。
-
-## 推荐
-
-### 服务器
-
-| 服务商 | 说明 | 链接 |
-| --- | --- | --- |
-| CloudCone | 1. 演示站点所用服务商<br>2. 高性价比 VPS，磁盘 I/O 不受限 | [前往选购](https://app.cloudcone.com/?ref=14393) |
-
-### 网络服务
-
-| 服务商 | 特点 / 价格 | 链接 |
-| --- | --- | --- |
-| 良心云 | 低至 2 元/月 <br>新用户注册即获体验流量 | [前往注册](https://xn--9kqz23b19z.com/#/register?code=xAmvfdic) |
-| 赔钱机场 | 低至 1.5 元/月 <br>适合高流量与备用需求 | [前往注册](https://xn--mes358aby2apfg.com/register?code=FA4xlzHD&cover=sfw) |
-
 ## 快速开始
 
 要求 Docker 20+、Compose 2+，建议配置不低于 2 核 2 GB 内存。
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/fe-spark/EcoHub/main/scripts/install-release.sh | sh
-cd ~/ecohub
+git clone https://github.com/haonanren118/EcoHub.git
+cd EcoHub
 ```
 
 编辑 `.env`：将 `openssl rand -hex 32` 的输出写入 `JWT_SECRET`，并修改 MySQL / Redis 密码，然后启动：
@@ -124,8 +130,14 @@ npm run dev
 
 ## 交流社区
 
-- Telegram 交流群：[https://t.me/ecohub_club](https://t.me/ecohub_club)
+- **QQ 交流群：`708144970`** —— 本发行版部署答疑、源站配置交流、问题反馈
+- 上游 Telegram 交流群：[https://t.me/ecohub_club](https://t.me/ecohub_club)
+
+## 鸣谢
+
+- **原作者 / 上游项目**：[fe-spark/EcoHub](https://github.com/fe-spark/EcoHub) —— 本发行版全部核心功能均来自上游，感谢原作者的开源与持续维护。若本版修复有价值，请优先向上游提交 PR / Issue。
+- 上游在线演示与文档：见原仓库 README。
 
 ---
 
-[PolyForm Noncommercial 1.0.0](./LICENSE) · [fe-spark/EcoHub](https://github.com/fe-spark/EcoHub) · [Issues](https://github.com/fe-spark/EcoHub/issues) · [Telegram Group](https://t.me/+6O6MiUdVSOplNjQ0)
+[PolyForm Noncommercial 1.0.0](./LICENSE) · [haonanren118/EcoHub](https://github.com/haonanren118/EcoHub) · [Issues](https://github.com/haonanren118/EcoHub/issues)

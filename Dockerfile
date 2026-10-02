@@ -11,6 +11,9 @@ ENV GO111MODULE=on \
     TZ=Asia/Shanghai
 
 ARG TARGETARCH
+# 允许通过 --build-arg GOPROXY=... 覆盖模块代理（国内环境必需）
+ARG GOPROXY=https://goproxy.cn,direct
+ENV GOPROXY=${GOPROXY}
 
 WORKDIR /src
 COPY server/go.mod server/go.sum ./
@@ -28,7 +31,9 @@ FROM --platform=$BUILDPLATFORM node:20-alpine AS web-deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY web/package.json web/package-lock.json ./
-RUN --mount=type=cache,target=/root/.npm npm ci
+# 允许通过 --build-arg NPM_REGISTRY=... 覆盖 npm 源（国内环境加速）
+ARG NPM_REGISTRY=https://registry.npmmirror.com
+RUN --mount=type=cache,target=/root/.npm npm config set registry ${NPM_REGISTRY} && npm ci
 
 FROM --platform=$BUILDPLATFORM node:20-alpine AS web-builder
 WORKDIR /app
