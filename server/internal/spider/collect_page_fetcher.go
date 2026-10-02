@@ -7,6 +7,7 @@ import (
 	"log"
 	"math/rand"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -165,13 +166,59 @@ func shouldLogCollectFailure(failed int) bool {
 	return failed == 1 || failed%collectFailureLogStep == 0
 }
 
-func buildPageRequest(s *model.FilmSource, h, pg int) utils.RequestInfo {
+// buildPageRequest 构造分页请求。
+// tids 非空时透传源站分类参数 t（多个用逗号连接），使源站按分类分页，
+// 从而支持「只对指定分类做全量重采」；tids 为空时行为与原先完全一致。
+func buildPageRequest(s *model.FilmSource, h, pg int, tids []string) utils.RequestInfo {
 	r := utils.RequestInfo{Uri: s.Uri, Params: url.Values{}}
 	r.Params.Set("pg", fmt.Sprint(pg))
 	if h > 0 {
 		r.Params.Set("h", fmt.Sprint(h))
 	}
+	if len(tids) > 0 {
+		r.Params.Set("t", strings.Join(tids, ","))
+	}
 	return r
+}
+
+// filmMatchesAnyTid 判断影片是否属于指定源站分类集合。
+// 源站不支持 t 参数时（分页结果仍是全量），由这里做客户端过滤兜底。
+func filmMatchesAnyTid(detail model.MovieDetail, tidSet map[string]struct{}) bool {
+	if len(tidSet) == 0 {
+		return true
+	}
+	for _, v := range []string{detail.TypeId, detail.TypeId1} {
+		if v == "" {
+			continue
+		}
+		if _, ok := tidSet[v]; ok {
+			return true
+		}
+	}
+	return false
+}
+
+// filterDetailsByTid 在降级路径下过滤出目标分类的影片。
+func filterDetailsByTid(list []model.MovieDetail, tids []string) []model.MovieDetail {
+	if len(tids) == 0 {
+		return list
+	}
+	tidSet := make(map[string]struct{}, len(tids))
+	for _, t := range tids {
+		if t = strings.TrimSpace(t); t != "" {
+			tidSet[t] = struct{}{}
+		}
+	}
+	if len(tidSet) == 0 {
+		return list
+	}
+	filtered := make([]model.MovieDetail, 0, len(list))
+	for _, d := range list {
+		if filmMatchesAnyTid(d, tidSet) {
+			filtered = append(filtered, d)
+		}
+	}
+	return filtered
 }
 
 func collectFilmPages(parentCtx context.Context, pageCount int, requestWorkerLimit int, s *model.FilmSource, h int, batchCtx *collectBatchContext) (bool, error) {

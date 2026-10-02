@@ -182,4 +182,8 @@ type CollectParams struct {
 	Ids   []string `json:"ids"`   // 资源站id列表
 	Time  int      `json:"time"`  // 采集时长
 	Batch bool     `json:"batch"` // 是否批量执行
+	// Tids 源站分类 id 列表（source_type_id）。非空时表示只对指定分类做全量重采：
+	// 请求透传 t=<tid> 让源站按分类分页；源站不支持该参数时降级为全量拉取后按分类过滤。
+	// 仅在 Time < 0（全量重建）语义下生效。
+	Tids []string `json:"tids"`
 }

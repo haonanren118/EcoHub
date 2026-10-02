@@ -316,8 +316,21 @@ func InitConfig() {
 	MysqlPass = mPass
 	MysqlDBName = mDB
 
-	MysqlDsn = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local&timeout=10s&readTimeout=30s&interpolateParams=true",
-		mUser, mPass, mHost, mPort, mDB)
+	// readTimeout 默认 30s 对「全量采集后的快照重建」这类长任务过短：
+	// EnsureActiveFilmListSnapshot → refreshMissingPlayFromSummaries 会执行
+	// `film_index JOIN movie_detail_info WHERE play_from_summary = '' OR IS NULL`
+	// 的全表扫描并 Pluck 出全部 mid，十几万行规模耗时可达 30s 以上，触发
+	// i/o timeout → invalid connection，使紧随其后的 RebuildFilmListSnapshot
+	// 直接失败，快照重建从未真正开始，前台长期读不到数据。
+	// 这里放宽到 600s，并与 MySQL 服务端 net_read_timeout / net_write_timeout
+	// 保持一致（需在 compose 中同步设置，否则服务端仍会先断开）。
+	// 可用 MYSQL_READ_TIMEOUT 覆盖（传 Go duration，如 "10m"）。
+	readTimeout := strings.TrimSpace(os.Getenv("MYSQL_READ_TIMEOUT"))
+	if readTimeout == "" {
+		readTimeout = "600s"
+	}
+	MysqlDsn = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local&timeout=10s&readTimeout=%s&interpolateParams=true",
+		mUser, mPass, mHost, mPort, mDB, readTimeout)
 	fmt.Printf("[Config] 加载 MySQL DSN: %s:%s@(%s:%s)/%s\n", mUser, "******", mHost, mPort, mDB)
 
 	jwtSecret := os.Getenv("JWT_SECRET")
