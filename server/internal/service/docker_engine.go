@@ -230,7 +230,7 @@ func splitImageTag(image string) (repo, tag string) {
 func latestImageRef(current string) string {
 	current = strings.TrimSpace(current)
 	if current == "" {
-		return "ghcr.io/fe-spark/ecohub:latest"
+		return imageRepoRef() + ":latest"
 	}
 	if i := strings.Index(current, "@"); i >= 0 {
 		current = current[:i]

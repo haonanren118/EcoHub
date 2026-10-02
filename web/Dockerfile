@@ -30,7 +30,7 @@ WORKDIR /app
 
 LABEL org.opencontainers.image.title="EcoHub Web" \
       org.opencontainers.image.description="EcoHub Next.js frontend for the public site, login page, and management console." \
-      org.opencontainers.image.source="https://github.com/fe-spark/EcoHub"
+      org.opencontainers.image.source="https://github.com/haonanren118/EcoHub"
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1

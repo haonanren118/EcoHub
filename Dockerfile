@@ -10,10 +10,17 @@ ENV GO111MODULE=on \
     GOOS=linux \
     TZ=Asia/Shanghai
 
-ARG TARGETARCH
-# 允许通过 --build-arg GOPROXY=... 覆盖模块代理（国内环境必需）
+# 国内自托管构建场景必须显式声明 GOPROXY，否则 go mod download / go build
+# 会回落到 https://proxy.golang.org（Google 域名，国内不可达），
+# 表现为大量 "dial tcp 142.251.33.209:443: i/o timeout"。
+# 可通过 --build-arg GOPROXY=... 覆盖。
 ARG GOPROXY=https://goproxy.cn,direct
-ENV GOPROXY=${GOPROXY}
+ARG GOSUMDB=off
+ENV GOPROXY=${GOPROXY} \
+    GOSUMDB=${GOSUMDB} \
+    GOFLAGS=-mod=mod
+
+ARG TARGETARCH
 
 WORKDIR /src
 COPY server/go.mod server/go.sum ./
@@ -22,7 +29,8 @@ RUN --mount=type=cache,target=/go/pkg/mod go mod download
 COPY server/ .
 RUN --mount=type=cache,target=/root/.cache/go-build \
     GOARCH=$TARGETARCH go build -o /out/main ./cmd/server/... && \
-    GOARCH=$TARGETARCH go build -o /out/migrate_match_keys ./cmd/tool/migrate_match_keys/...
+    GOARCH=$TARGETARCH go build -o /out/migrate_match_keys ./cmd/tool/migrate_match_keys/... && \
+    GOARCH=$TARGETARCH go build -o /out/migrate_slave_playlist_keys ./cmd/tool/migrate_slave_playlist_keys/...
 
 # ==========================================
 # 2. 编译 Next.js 前端应用 (web)
@@ -31,9 +39,7 @@ FROM --platform=$BUILDPLATFORM node:20-alpine AS web-deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY web/package.json web/package-lock.json ./
-# 允许通过 --build-arg NPM_REGISTRY=... 覆盖 npm 源（国内环境加速）
-ARG NPM_REGISTRY=https://registry.npmmirror.com
-RUN --mount=type=cache,target=/root/.npm npm config set registry ${NPM_REGISTRY} && npm ci
+RUN --mount=type=cache,target=/root/.npm npm ci
 
 FROM --platform=$BUILDPLATFORM node:20-alpine AS web-builder
 WORKDIR /app
@@ -53,7 +59,7 @@ FROM node:20-alpine AS runner
 
 LABEL org.opencontainers.image.title="EcoHub All-in-One" \
       org.opencontainers.image.description="EcoHub All-in-One single image containing both Go server and Next.js web." \
-      org.opencontainers.image.source="https://github.com/fe-spark/EcoHub"
+      org.opencontainers.image.source="https://github.com/haonanren118/EcoHub"
 
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
@@ -68,9 +74,12 @@ WORKDIR /app
 # 拷贝 Go 服务二进制文件及迁移工具
 COPY --from=server-builder /out/main /app/server/main
 COPY --from=server-builder /out/migrate_match_keys /usr/local/bin/migrate_match_keys
-RUN chmod +x /usr/local/bin/migrate_match_keys && \
+COPY --from=server-builder /out/migrate_slave_playlist_keys /usr/local/bin/migrate_slave_playlist_keys
+RUN chmod +x /usr/local/bin/migrate_match_keys /usr/local/bin/migrate_slave_playlist_keys && \
     ln -s /usr/local/bin/migrate_match_keys /app/migrate_match_keys && \
-    ln -s /usr/local/bin/migrate_match_keys /app/server/migrate_match_keys
+    ln -s /usr/local/bin/migrate_match_keys /app/server/migrate_match_keys && \
+    ln -s /usr/local/bin/migrate_slave_playlist_keys /app/migrate_slave_playlist_keys && \
+    ln -s /usr/local/bin/migrate_slave_playlist_keys /app/server/migrate_slave_playlist_keys
 
 # 拷贝 Next.js 产物
 COPY --from=web-builder /app/public /app/web/public

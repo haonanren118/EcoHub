@@ -4,24 +4,61 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
 
 func TestLatestImageRef(t *testing.T) {
+	// 默认（无当前镜像）应回落到本仓库的镜像地址，而非上游 fe-spark
+	if got := latestImageRef(""); got != imageRepoRef()+":latest" {
+		t.Fatalf("latestImageRef(\"\")=%q want %q", got, imageRepoRef()+":latest")
+	}
 	cases := []struct {
 		in, want string
 	}{
-		{"", "ghcr.io/fe-spark/ecohub:latest"},
-		{"ghcr.io/fe-spark/ecohub:v2.0.4", "ghcr.io/fe-spark/ecohub:latest"},
-		{"ghcr.io/fe-spark/ecohub:latest", "ghcr.io/fe-spark/ecohub:latest"},
-		{"ghcr.io/fe-spark/ecohub", "ghcr.io/fe-spark/ecohub:latest"},
-		{"ghcr.io/fe-spark/ecohub@sha256:abc", "ghcr.io/fe-spark/ecohub:latest"},
+		{"ghcr.io/haonanren118/ecohub:v2.0.4", "ghcr.io/haonanren118/ecohub:latest"},
+		{"ghcr.io/haonanren118/ecohub:latest", "ghcr.io/haonanren118/ecohub:latest"},
+		{"ghcr.io/haonanren118/ecohub", "ghcr.io/haonanren118/ecohub:latest"},
+		{"ghcr.io/haonanren118/ecohub@sha256:abc", "ghcr.io/haonanren118/ecohub:latest"},
+		// 本地构建镜像也应保留其仓库名，只把 tag 换成 latest 或目标版本
+		{"ecohub:v2.7.1", "ecohub:latest"},
 	}
 	for _, c := range cases {
 		if got := latestImageRef(c.in); got != c.want {
 			t.Fatalf("latestImageRef(%q)=%q want %q", c.in, got, c.want)
 		}
+	}
+}
+
+func TestGithubRepoPath(t *testing.T) {
+	t.Setenv("ECOHUB_IMAGE_REPO", "")
+	if got := githubRepoPath(); got != "haonanren118/EcoHub" {
+		t.Fatalf("githubRepoPath()=%q want haonanren118/EcoHub", got)
+	}
+}
+
+func TestRepoPathFromImageRepo(t *testing.T) {
+	cases := []struct {
+		imageRepo, want string
+	}{
+		{"ghcr.io/haonanren118/ecohub", "haonanren118/ecohub"},
+		{"ghcr.io/haonanren118/ecohub:v2.7.1", "haonanren118/ecohub"},
+		{"haonanren118/ecohub", "haonanren118/ecohub"},
+		// registry 带端口时必须保留，不能把端口误当 tag 切掉
+		{"registry.example.com:5000/haonanren118/ecohub:v1", "haonanren118/ecohub"},
+	}
+	for _, c := range cases {
+		t.Setenv("ECOHUB_IMAGE_REPO", c.imageRepo)
+		if got := repoPathFromImageRepo(); got != c.want {
+			t.Fatalf("repoPathFromImageRepo(%q)=%q want %q", c.imageRepo, got, c.want)
+		}
+	}
+}
+
+func TestDefaultAllInOneImageNotUpstream(t *testing.T) {
+	if strings.Contains(defaultAllInOneImage, "fe-spark") {
+		t.Fatalf("defaultAllInOneImage 仍指向上游仓库: %s", defaultAllInOneImage)
 	}
 }
 
@@ -72,7 +109,7 @@ func TestBuildReplacementBody(t *testing.T) {
 		ID:   "old123",
 		Name: "/Eco-hub",
 		Config: []byte(`{
-			"Image": "ghcr.io/fe-spark/ecohub:v2.6.0",
+			"Image": "ghcr.io/haonanren118/ecohub:v2.6.0",
 			"Hostname": "abcdef123456",
 			"Env": ["PORT=8080"]
 		}`),
@@ -97,12 +134,12 @@ func TestBuildReplacementBody(t *testing.T) {
 		},
 	}
 
-	body, extraNets, err := buildReplacementBody(insp, "ghcr.io/fe-spark/ecohub:v2.6.1")
+	body, extraNets, err := buildReplacementBody(insp, "ghcr.io/haonanren118/ecohub:v2.6.1")
 	if err != nil {
 		t.Fatalf("buildReplacementBody err: %v", err)
 	}
 
-	if body["Image"] != "ghcr.io/fe-spark/ecohub:v2.6.1" {
+	if body["Image"] != "ghcr.io/haonanren118/ecohub:v2.6.1" {
 		t.Fatalf("expected updated image, got %v", body["Image"])
 	}
 	if _, exists := body["Hostname"]; exists {
@@ -187,5 +224,3 @@ func TestDockerEngineLiveSocket(t *testing.T) {
 	t.Logf("真实 Docker 连通性验证成功: 宿主机 Docker 响应正常，成功检出容器 %s (ID: %s, 主网络数: %d, 附加网络数: %d)",
 		insp.Name, insp.ID[:12], len(endpoints), len(extraNets))
 }
-
-

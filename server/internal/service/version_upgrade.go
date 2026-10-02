@@ -13,7 +13,9 @@ import (
 	"time"
 )
 
-const defaultAllInOneImage = "ghcr.io/fe-spark/ecohub:latest"
+// defaultAllInOneImage 在线升级兜底镜像：与 config.DefaultImageRepo 同源，
+// 避免在容器未挂载完整 Config.Image 时回落到上游仓库。
+var defaultAllInOneImage = imageRepoRef() + ":latest"
 
 var (
 	reContainerPath = regexp.MustCompile(`/containers/([0-9a-f]{64})(?:/|\b)`)

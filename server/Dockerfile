@@ -6,6 +6,12 @@ ENV GO111MODULE=on \
     GOOS=linux \
     TZ=Asia/Shanghai
 
+# 国内自托管构建必须显式设置 GOPROXY，否则回落到 proxy.golang.org（不可达）。
+ARG GOPROXY=https://goproxy.cn,direct
+ARG GOSUMDB=off
+ENV GOPROXY=${GOPROXY} \
+    GOSUMDB=${GOSUMDB}
+
 ARG TARGETARCH
 
 WORKDIR /src
@@ -21,7 +27,7 @@ FROM alpine:3.22
 LABEL maintainer="spark" \
       org.opencontainers.image.title="EcoHub Server" \
       org.opencontainers.image.description="EcoHub Go API server for collection, aggregation, cache, authentication, and open interfaces." \
-      org.opencontainers.image.source="https://github.com/fe-spark/EcoHub"
+      org.opencontainers.image.source="https://github.com/haonanren118/EcoHub"
 
 ENV TZ=Asia/Shanghai
 

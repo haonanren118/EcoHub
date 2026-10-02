@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -52,7 +53,7 @@ func (s *VersionService) GetAppVersion(checkUpdate bool) AppVersionInfo {
 	info.UpgradePhase = st.Phase
 	info.UpgradeError = st.Error
 	onPre := isPreRelease(info.Current, "", false)
-	latest, err := s.loadLatestRelease(onPre)
+	latest, err := s.LoadLatestRelease(onPre)
 	if err != nil || latest.TagName == "" {
 		if err != nil {
 			log.Printf("[Version] 获取 GitHub Release 失败: %v", err)
@@ -68,7 +69,7 @@ func (s *VersionService) GetAppVersion(checkUpdate bool) AppVersionInfo {
 	return info
 }
 
-func (s *VersionService) loadLatestRelease(includePre bool) (githubReleaseCache, error) {
+func (s *VersionService) LoadLatestRelease(includePre bool) (githubReleaseCache, error) {
 	key := config.LatestReleaseCacheKey
 	if includePre {
 		key = config.LatestReleasePreCacheKey
@@ -192,14 +193,50 @@ func isASCIILetter(b byte) bool {
 	return b >= 'a' && b <= 'z'
 }
 
+// githubRepoPath 返回「检查更新」使用的 GitHub 仓库路径（owner/repo）。
+// 完全由 config.ProjectURL 推导，保证前台展示地址与升级检查源始终一致。
+// 若 ProjectURL 被改成非 GitHub 地址，则回落到 config.DefaultImageRepo 的 owner/repo。
 func githubRepoPath() string {
 	u := strings.TrimSuffix(strings.TrimSpace(config.ProjectURL), ".git")
 	u = strings.TrimSuffix(u, "/")
 	const prefix = "https://github.com/"
 	if strings.HasPrefix(u, prefix) {
-		return strings.TrimPrefix(u, prefix)
+		if p := strings.TrimPrefix(u, prefix); p != "" {
+			return p
+		}
 	}
-	return "fe-spark/EcoHub"
+	return repoPathFromImageRepo()
+}
+
+// repoPathFromImageRepo 从镜像仓库地址推导 owner/repo。
+// 例：ghcr.io/haonanren118/ecohub → haonanren118/ecohub
+func repoPathFromImageRepo() string {
+	ref := strings.TrimSpace(imageRepoRef())
+	if i := strings.Index(ref, "@"); i >= 0 {
+		ref = ref[:i]
+	}
+	// 去掉 tag（只能在最后一段里找冒号，避免误切 registry 的端口号）
+	if i := strings.LastIndex(ref, ":"); i >= 0 && !strings.Contains(ref[i:], "/") {
+		ref = ref[:i]
+	}
+	parts := strings.Split(ref, "/")
+	if len(parts) >= 3 {
+		// <registry>/<owner>/<repo>
+		return parts[len(parts)-2] + "/" + parts[len(parts)-1]
+	}
+	if len(parts) == 2 {
+		// <owner>/<repo>
+		return ref
+	}
+	return "haonanren118/EcoHub"
+}
+
+// imageRepoRef 返回在线升级所用的镜像仓库前缀，可用 ECOHUB_IMAGE_REPO 覆盖。
+func imageRepoRef() string {
+	if v := strings.TrimSpace(os.Getenv("ECOHUB_IMAGE_REPO")); v != "" {
+		return v
+	}
+	return config.DefaultImageRepo
 }
 
 func isNewerVersion(latest, current string) bool {
@@ -224,11 +261,6 @@ func isNewerVersion(latest, current string) bool {
 		return false
 	}
 	return comparePreRelease(lpre, cpre) > 0
-}
-
-func parseSemver(raw string) (major, minor, patch int, ok bool) {
-	major, minor, patch, _, ok = parseSemverFull(raw)
-	return major, minor, patch, ok
 }
 
 func parseSemverFull(raw string) (major, minor, patch int, pre string, ok bool) {

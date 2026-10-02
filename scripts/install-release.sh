@@ -3,7 +3,7 @@ set -eu
 
 repo_ref="${ECOHUB_REPO_REF:-main}"
 install_dir="${ECOHUB_INSTALL_DIR:-$HOME/ecohub}"
-raw_base="${ECOHUB_RAW_BASE:-https://raw.githubusercontent.com/fe-spark/EcoHub/${repo_ref}}"
+raw_base="${ECOHUB_RAW_BASE:-https://raw.githubusercontent.com/haonanren118/EcoHub/${repo_ref}}"
 
 download() {
   source_url="$1"
