@@ -209,7 +209,13 @@ func HandlePreparedCollect(id string, h int) error {
 	return handleCollectWithStopVersion(id, h, nil, true, true, nil)
 }
 
-func handleCollectWithStopVersion(id string, h int, runVersion *uint64, isStandalone bool, allowPreparedStart bool, batchCtx *collectBatchContext) (retErr error) {
+// HandlePreparedCollectWithTids 在已 PrepareSingleCollectStart 的前提下启动采集，
+// 并限定只采集 tids 指定的源站分类（tids 为空则退化为普通整站采集）。
+func HandlePreparedCollectWithTids(id string, h int, tids []string) error {
+	return handleCollectWithStopVersion(id, h, nil, true, true, nil, tids...)
+}
+
+func handleCollectWithStopVersion(id string, h int, runVersion *uint64, isStandalone bool, allowPreparedStart bool, batchCtx *collectBatchContext, tids ...string) (retErr error) {
 	hadWrites := false
 	var collectCtx context.Context
 	statsOwned := false
@@ -240,7 +246,7 @@ func handleCollectWithStopVersion(id string, h int, runVersion *uint64, isStanda
 		return err
 	}
 	if isStandalone {
-		batchCtx = newCollectBatchContext(model.NotifyTriggerManual, "单站采集", []model.FilmSource{*s}, nil, time.Now(), true)
+		batchCtx = newCollectBatchContextWithTids(model.NotifyTriggerManual, "单站采集", []model.FilmSource{*s}, nil, time.Now(), tids, true)
 	}
 	isMasterFullCollect := s.Grade == model.MasterCollect && h < 0
 	if isMasterFullCollect && batchCtx != nil {
@@ -379,7 +385,12 @@ func handleCollectWithStopVersion(id string, h int, runVersion *uint64, isStanda
 	log.Printf("[Spider] 站点 %s 共 %d 页，开始采集...\n", s.Name, pageCount)
 
 	pageWorkerLimit := getSourcePageConcurrency(s)
-	hadWrites, err = collectFilmPages(ctx, pageCount, pageWorkerLimit, s, h, batchCtx)
+	// 指定分类采集（tids 非空）时透传源站分类参数，仅采集目标分类。
+	var collectTids []string
+	if batchCtx != nil {
+		collectTids = batchCtx.tids
+	}
+	hadWrites, err = collectFilmPages(ctx, pageCount, pageWorkerLimit, s, h, collectTids, batchCtx)
 	if err != nil {
 		return err
 	}

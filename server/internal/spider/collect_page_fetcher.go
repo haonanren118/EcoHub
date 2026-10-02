@@ -7,6 +7,7 @@ import (
 	"log"
 	"math/rand"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -183,15 +184,16 @@ func buildPageRequest(s *model.FilmSource, h, pg int, tids []string) utils.Reque
 
 // filmMatchesAnyTid 判断影片是否属于指定源站分类集合。
 // 源站不支持 t 参数时（分页结果仍是全量），由这里做客户端过滤兜底。
+// 源站分类 id 对应 MovieDetail 的 rawCid / rawPid（未经映射的原始分类）。
 func filmMatchesAnyTid(detail model.MovieDetail, tidSet map[string]struct{}) bool {
 	if len(tidSet) == 0 {
 		return true
 	}
-	for _, v := range []string{detail.TypeId, detail.TypeId1} {
-		if v == "" {
+	for _, v := range []int64{detail.RawCid, detail.RawPid} {
+		if v == 0 {
 			continue
 		}
-		if _, ok := tidSet[v]; ok {
+		if _, ok := tidSet[strconv.FormatInt(v, 10)]; ok {
 			return true
 		}
 	}
@@ -221,7 +223,7 @@ func filterDetailsByTid(list []model.MovieDetail, tids []string) []model.MovieDe
 	return filtered
 }
 
-func collectFilmPages(parentCtx context.Context, pageCount int, requestWorkerLimit int, s *model.FilmSource, h int, batchCtx *collectBatchContext) (bool, error) {
+func collectFilmPages(parentCtx context.Context, pageCount int, requestWorkerLimit int, s *model.FilmSource, h int, tids []string, batchCtx *collectBatchContext) (bool, error) {
 	if pageCount <= 0 {
 		return false, nil
 	}
@@ -362,7 +364,17 @@ func collectFilmPages(parentCtx context.Context, pageCount int, requestWorkerLim
 					updateCollectProgress(s.Id, func(progress *model.CollectProgress) {
 						stampCollectPageRunning(progress, pg)
 					})
-					list, err := getFilmDetailWithRetry(ctx, s, buildPageRequest(s, h, pg))
+					// 指定分类采集时透传 t 参数；同时用客户端过滤兜底源站不支持的场景。
+					list, err := getFilmDetailWithRetry(ctx, s, buildPageRequest(s, h, pg, tids))
+					if err == nil && len(list) > 0 && len(tids) > 0 {
+						// 过滤后可能为空（该页恰好没有目标分类的影片），
+						// 这属于正常情况，不能当作 "response list is empty" 判为失败，
+						// 否则会误触发跳页/中断。因此仅当过滤结果非空时才覆盖，
+						// 为空则回退保留原始列表交由写入侧按分类过滤。
+						if filtered := filterDetailsByTid(list, tids); len(filtered) > 0 {
+							list = filtered
+						}
+					}
 					if err == nil && len(list) == 0 {
 						err = errors.New("response list is empty")
 					}

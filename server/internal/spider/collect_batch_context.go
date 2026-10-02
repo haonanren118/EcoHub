@@ -49,9 +49,20 @@ type collectBatchContext struct {
 	masterAffectedMIDs map[int64]struct{}
 	pendingMasterMIDs  map[string]map[int64]struct{}
 	finishedSources    map[string]model.FilmSource
+	// tids 指定本次采集只针对的源站分类 id（source_type_id）。
+	// 非空时请求透传 t=<tid>，源站不支持则由写入侧按 rawCid/rawPid 过滤。
+	// 为空表示常规全量/增量采集，行为与改动前完全一致。
+	tids []string
 }
 
 func newCollectBatchContext(trigger, tag string, sources []model.FilmSource, batch *notify.ChangeBatch, startedAt time.Time, isStandalone ...bool) *collectBatchContext {
+	return newCollectBatchContextWithTids(trigger, tag, sources, batch, startedAt, nil, isStandalone...)
+}
+
+// newCollectBatchContextWithTids 在全量构造的基础上附加「限定源站分类」参数。
+// tids 非空表示本次采集只针对这些源站分类（source_type_id），
+// 用于「按分类全量重采」，避免整站全量重跑的漫长等待。
+func newCollectBatchContextWithTids(trigger, tag string, sources []model.FilmSource, batch *notify.ChangeBatch, startedAt time.Time, tids []string, isStandalone ...bool) *collectBatchContext {
 	if startedAt.IsZero() {
 		startedAt = time.Now()
 	}
@@ -73,6 +84,7 @@ func newCollectBatchContext(trigger, tag string, sources []model.FilmSource, bat
 		masterAffectedMIDs: make(map[int64]struct{}),
 		pendingMasterMIDs:  make(map[string]map[int64]struct{}),
 		finishedSources:    make(map[string]model.FilmSource),
+		tids:               tids,
 	}
 	registerActiveBatch(b)
 	return b

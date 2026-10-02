@@ -28,6 +28,13 @@ func finalizeCategorySync() {
 
 // StartCollect 执行对指定站点的采集任务
 func (s *SpiderService) StartCollect(id string, h int) error {
+	return s.StartCollectWithTids(id, h, nil)
+}
+
+// StartCollectWithTids 执行采集任务，可限定只采集指定的源站分类。
+// tids 非空时用于「按分类全量重采」：请求透传 t=<tid>，只重建这些分类的数据，
+// 避免整站全量重跑；为空则与 StartCollect 行为完全一致。
+func (s *SpiderService) StartCollectWithTids(id string, h int, tids []string) error {
 	fs := repository.FindCollectSourceById(id)
 	if fs == nil {
 		return errors.New("采集任务开启失败，采集站信息不存在")
@@ -39,7 +46,7 @@ func (s *SpiderService) StartCollect(id string, h int) error {
 		return err
 	}
 	go func() {
-		err := spider.HandlePreparedCollect(id, h)
+		err := spider.HandlePreparedCollectWithTids(id, h, tids)
 		if err != nil {
 			log.Printf("[SpiderService] 资源站[%s]采集任务执行失败: %s", id, err)
 		}

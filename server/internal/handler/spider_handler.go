@@ -66,7 +66,7 @@ func (h *SpiderHandler) StarSpider(c *gin.Context) {
 			dto.Failed("批量采集开启失败, 资源站Id获取失败", c)
 			return
 		}
-		if err := service.SpiderSvc.StartCollect(cp.Id, cp.Time); err != nil {
+		if err := service.SpiderSvc.StartCollectWithTids(cp.Id, cp.Time, cp.Tids); err != nil {
 			dto.Failed(fmt.Sprint("采集任务开启失败: ", err.Error()), c)
 			return
 		}
