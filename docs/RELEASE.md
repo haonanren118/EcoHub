@@ -1,9 +1,15 @@
-发行版 **v2.6.8**（基于上游 v2.6.7），Docker 镜像 `ghcr.io/haonanren118/ecohub:v2.6.8` 与 `ghcr.io/haonanren118/ecohub:latest`。
+发行版 **v2.6.9**（基于上游 v2.6.7），Docker 镜像 `ghcr.io/haonanren118/ecohub:v2.6.9` 与 `ghcr.io/haonanren118/ecohub:latest`。
 
 ### 升级指引
 
 - **平滑升级**：支持后台「检查更新」一键平滑升级，或通过 `docker compose pull ecohub && docker compose up -d ecohub` 快速更新。
 - **数据兼容**：完全向下兼容现有 MySQL 与 Redis 数据结构，无破坏性变更。
+
+---
+
+### v2.6.9 核心变更
+
+- **内置链接指向本发行版仓库**：`web/src/lib/project.ts` 的 `PROJECT_GITHUB_URL` 由 `fe-spark/EcoHub` 改为 `haonanren118/EcoHub`。该常量被前台 Header、Footer、登录页与管理后台布局共 4 处复用，一次性统一，避免用户点击后跳转到上游而非本发行版。
 
 ---
 
@@ -22,9 +28,8 @@
 
 **验证结果**（飞牛 NAS 实测，源=量子资源）
 
-- 数据量：`film_index` 48,120 部；`film_category` 40 条（8 根 + 32 子）；`slave_movie_playlists` 7,305 条。
 - 分类树：8 个根分类（`电影片/连续剧/综艺片/动漫片/体育/演员/短剧/AI漫剧`）全部 `depth=0`，32 个子分类 `depth=1`，最大深度恰为 1，符合两层约束。
-- 各根分类影片分布：连续剧 18,932 / AI漫剧 12,230 / 体育 7,238 / 短剧 3,872 / 综艺片 816 / 电影片 2,360 / 动漫片 889。此前"电影片全部无"问题已解决。
+- 全量采集完成：`film_index` 13.7 万部，各根分类影片数（连续剧 35,419 / 电影片 26,735 / 体育 25,397 / AI漫剧 12,230 / 动漫片 5,874 / 综艺片 4,368 / 短剧 3,874）。此前"电影片全部无"问题已解决。
 
 ---
 
