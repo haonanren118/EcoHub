@@ -1,9 +1,30 @@
-正式版 **v2.6.7**，Docker 镜像 `ghcr.io/fe-spark/ecohub:v2.6.7` 与 `ghcr.io/fe-spark/ecohub:latest`。
+发行版 **v2.6.8**（基于上游 v2.6.7），Docker 镜像 `ghcr.io/haonanren118/ecohub:v2.6.8` 与 `ghcr.io/haonanren118/ecohub:latest`。
 
 ### 升级指引
 
 - **平滑升级**：支持后台「检查更新」一键平滑升级，或通过 `docker compose pull ecohub && docker compose up -d ecohub` 快速更新。
 - **数据兼容**：完全向下兼容现有 MySQL 与 Redis 数据结构，无破坏性变更。
+
+---
+
+### v2.6.8 核心变更（本发行版相对上游 v2.6.7）
+
+**构建可用性增强（Dockerfile）**
+
+- **Go 模块代理参数化**：server-builder 阶段新增 `ARG GOPROXY`（默认 `https://goproxy.cn,direct`）。上游默认走 `proxy.golang.org`，境内构建必然超时失败（实测 455s 超时），加参数后依赖下载恢复至可接受耗时。
+- **npm 源参数化**：web-deps 阶段新增 `ARG NPM_REGISTRY`（默认 `https://registry.npmmirror.com`），前端依赖安装加速（`npm ci` 实测约 76s）。
+- **向后兼容**：两处均为构建期参数，海外环境不传参即保持上游默认行为，亦可通过 `--build-arg` 覆盖为任意自有代理。
+
+**分类树说明（运行时能力）**
+
+- 本版采集内核已采用 `inferCategoryParents()`：改为拉取 `?ac=detail` 详情页读取真实 `TypeID1` 字段推断父级，替代上游旧版 `InferCategoryParentsBySemantic()`（按分类名称语义猜测，是 `分类层级最多支持两层` 报错的源头）。
+- 推断仅在源站**全部分类 `Pid==0`（完全平铺）**时触发（`needsCategoryParentInference()`）。13 个主流源实测：8 个源自带两层结构，5 个全平铺源经详情页推断后最大深度仍 ≤ 1，**全部可直接作为主站**，分类树可正确重建。
+
+**验证结果**（飞牛 NAS 实测，源=量子资源）
+
+- 数据量：`film_index` 48,120 部；`film_category` 40 条（8 根 + 32 子）；`slave_movie_playlists` 7,305 条。
+- 分类树：8 个根分类（`电影片/连续剧/综艺片/动漫片/体育/演员/短剧/AI漫剧`）全部 `depth=0`，32 个子分类 `depth=1`，最大深度恰为 1，符合两层约束。
+- 各根分类影片分布：连续剧 18,932 / AI漫剧 12,230 / 体育 7,238 / 短剧 3,872 / 综艺片 816 / 电影片 2,360 / 动漫片 889。此前"电影片全部无"问题已解决。
 
 ---
 
@@ -14,3 +35,4 @@
 - **下架聚合缓存即时淘汰**：管理员删除影片联动淘汰 12 小时分类首页快照，根除下架影片长期残留与 404 报错。
 - **空快照内存防穿透**：优化读模型双检逻辑支持合法空快照驻留内存，防止搜索请求反复击穿 SingleFlight 扫库。
 - **Android 客户端体验优化**：优化移动端公告与升级弹窗居中布局，解决弹窗贴靠屏幕左上角问题。
+
